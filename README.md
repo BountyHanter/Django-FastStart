@@ -33,7 +33,7 @@ source venv/bin/activate
 venv\Scripts\activate
 ```
 
-Установите зависимости:
+Установите зависимости (Обнови версии при необходимости!):
 ```bash
 pip install -r requirements.txt
 ```

@@ -1,2 +1,7 @@
-Django>=6.0,<7.0
-python-dotenv>=1.0,<2.0
+Django==5.2.12
+
+psycopg2-binary==2.9.9
+python-dotenv==1.0.1
+
+gunicorn==22.0.0
+pillow==11.1.0
