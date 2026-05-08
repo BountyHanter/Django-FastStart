@@ -1,103 +1,177 @@
-# Django Fast Start
+# AvitoBulkDeliv
 
-Это базовый шаблон для быстрого старта проекта на Django. В нем уже настроены основные папки, подключены переменные окружения и подготовлен Docker Compose для базы данных PostgreSQL.
+Базовый Django-проект с PostgreSQL, настройками окружения через `.env`, Docker Compose для базы данных, pytest-конфигурацией и заготовками для DRF/JWT, CORS/CSRF/session, SSL/HTTPS, email и логирования.
 
 ## Структура проекта
 
-- `config/` — настройки Django (settings, urls, wsgi, asgi).
-- `static/` — статические файлы (CSS, JS, изображения).
-- `media/` — файлы, загружаемые пользователями.
-- `templates/` — HTML-шаблоны.
-- `env.example` — пример файла с переменными окружения.
-- `docker-compose.yml` — конфигурация для запуска PostgreSQL в Docker.
-
----
+- `config/` - настройки Django, URL, WSGI/ASGI и вспомогательные утилиты.
+- `static/` - статические файлы для dev-режима.
+- `media/` - пользовательские файлы.
+- `templates/` - HTML-шаблоны.
+- `env.example` - пример переменных окружения.
+- `docker-compose.yml` - PostgreSQL 16 в Docker.
+- `pytest.ini` и `conftest.py` - базовая конфигурация тестов.
+- `logs/` - создается автоматически, сюда пишется `app.log`.
 
 ## Быстрый старт
 
 ### 1. Подготовка окружения
-Клонируйте репозиторий и перейдите в папку проекта:
+
 ```bash
 git clone <url_репозитория>
-cd DjangoFastStart
-```
+cd AvitoBulkDeliv
 
-Создайте виртуальное окружение и активируйте его:
-```bash
-python -m venv venv
+python -m venv .venv
+source .venv/bin/activate
 
-# Для Linux/macOS:
-source venv/bin/activate
-
-# Для Windows:
-venv\Scripts\activate
-```
-
-Установите зависимости (Обнови версии при необходимости!):
-```bash
 pip install -r requirements.txt
 ```
 
-### 2. Настройка переменных окружения
-Создайте файл `.env` на основе `env.example`:
+Для Windows активация окружения:
+
+```bash
+.venv\Scripts\activate
+```
+
+### 2. Настройка `.env`
+
+Создайте файл окружения:
+
 ```bash
 cp env.example .env
 ```
-Откройте `.env` и укажите свои данные (или оставьте для теста те, что есть).
 
-### 3. Настройка базы данных (PostgreSQL)
+Минимально проверьте и заполните:
 
-Проект настроен так, что базу данных можно запустить через Docker.
+```env
+SECRET_KEY=django-insecure-...
+DEBUG=True
+ALLOWED_HOSTS=localhost,127.0.0.1
 
-**Запуск БД:**
+DB_NAME=example_db
+DB_USER=example_user
+DB_PASSWORD=example_password
+DB_HOST=localhost
+DB_PORT=5432
+```
+
+`config/settings.py` сейчас использует PostgreSQL по умолчанию. Если Django запускается локально, а база поднята через Docker, оставьте `DB_HOST=localhost`. Если Django будет запускаться внутри Docker-сети рядом с сервисом `db`, используйте `DB_HOST=db`.
+
+### 3. Запуск PostgreSQL
+
 ```bash
 docker-compose up -d
 ```
-После этого PostgreSQL будет доступен на порту `6000` (как указано в `docker-compose.yml`).
 
-**Подключение PostgreSQL в Django:**
-В файле `config/settings.py` найдите секцию `DATABASES`. Закомментируйте стандартный блок для `sqlite3` и раскомментируйте блок для `postgresql`.
+`docker-compose.yml` пробрасывает PostgreSQL только на `127.0.0.1:${DB_PORT}:5432`, поэтому внешний порт берется из `.env`.
 
-*Не забудьте установить драйвер для PostgreSQL (если его нет в requirements):*
-```bash
-pip install psycopg2-binary
-```
+### 4. Миграции и запуск Django
 
-### 4. Применение миграций и запуск
-Создайте таблицы в базе данных:
 ```bash
 python manage.py migrate
-```
-
-Создайте суперпользователя:
-```bash
 python manage.py createsuperuser
-```
-
-Запустите сервер разработки:
-```bash
 python manage.py runserver
 ```
 
-Проект будет доступен по адресу: [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
+Проект будет доступен по адресу:
 
----
+```text
+http://127.0.0.1:8000/
+```
 
-## Что можно добавить еще (рекомендации)
+## Тесты
 
-Если проект будет расти, вот что обычно ставят в дополнение:
+В зависимостях добавлен `pytest-django`, а `pytest.ini` уже указывает `DJANGO_SETTINGS_MODULE = config.settings`.
 
-1.  **Django Rest Framework (DRF)** — если нужно делать API.
-    - `pip install djangorestframework`
-2.  **Celery + Redis** — для фоновых задач (рассылка писем, тяжелая обработка данных).
-    - Потребуется добавить Redis в `docker-compose.yml`.
+Запуск тестов:
 
----
+```bash
+pytest
+```
+
+Тестовая база для PostgreSQL задана как `test_db` в `config/settings.py`.
+
+## Опциональные возможности
+
+### DRF и JWT
+
+В `requirements.txt` подготовлены закомментированные зависимости:
+
+```text
+#djangorestframework==3.17.1
+#djangorestframework-simplejwt==5.5.1
+```
+
+Чтобы включить API на DRF:
+
+1. Раскомментируйте и установите зависимости.
+2. Добавьте `rest_framework` в `INSTALLED_APPS`.
+3. При использовании blacklist для JWT добавьте `rest_framework_simplejwt.token_blacklist`.
+4. Раскомментируйте блоки `REST_FRAMEWORK` и `SIMPLE_JWT` в `config/settings.py`.
+
+По умолчанию заготовка JWT использует access-токен на 30 минут и refresh-токен на 30 дней.
+
+### CORS, CSRF и cookies
+
+Для CORS подготовлены:
+
+```text
+#django-cors-headers==4.9.0
+```
+
+И закомментированные настройки в `config/settings.py`. При включении:
+
+1. Раскомментируйте зависимость и установите ее.
+2. Добавьте `corsheaders` в `INSTALLED_APPS`.
+3. Раскомментируйте `corsheaders.middleware.CorsMiddleware` в `MIDDLEWARE`.
+4. Раскомментируйте production-блок CORS/CSRF/SESSION.
+5. Заполните `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS` и cookie-настройки в `.env`.
+
+В production-блоке cookie-параметры зависят от `USE_SSL`: при HTTPS используется `SameSite=None`, при HTTP - `Lax`.
+
+### SSL/HTTPS
+
+В `config/settings.py` есть готовый закомментированный блок для production:
+
+- `SECURE_SSL_REDIRECT`
+- `SECURE_HSTS_SECONDS`
+- `SECURE_HSTS_INCLUDE_SUBDOMAINS`
+- `SECURE_HSTS_PRELOAD`
+- `SECURE_PROXY_SSL_HEADER`
+- исключение редиректа для `api/v1/health/`
+
+Включайте его только за HTTPS/proxy-инфраструктурой.
+
+### Email
+
+В `env.example` добавлены переменные:
+
+```env
+EMAIL_HOST=
+EMAIL_PORT=
+EMAIL_HOST_USER=
+EMAIL_HOST_PASSWORD=
+EMAIL_USE_SSL=
+```
+
+В `config/settings.py` есть закомментированный SMTP-блок. При включении также укажите `FRONTEND_URL`, если письма содержат ссылки на фронтенд.
+
+## Логирование
+
+Логи пишутся в консоль и в файл:
+
+```text
+logs/app.log
+```
+
+Файловый логгер использует ежедневную ротацию и хранит архивы за 14 дней. Уровень обработчиков зависит от `DEBUG`: `DEBUG` в dev и `INFO` в production. Корневой логгер и логгер `users` настроены на `INFO`.
 
 ## Полезные команды
 
-- `docker-compose logs -f db` — просмотр логов базы данных.
-- `docker-compose down` — остановить и удалить контейнеры с БД.
-- `python manage.py collectstatic` — собрать всю статику в одну папку (перед деплоем).
+```bash
+docker-compose logs -f db
+docker-compose down
+python manage.py collectstatic
+pytest
+```
 
----

@@ -10,7 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -46,14 +46,14 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     # 'rest_framework',  # pip install djangorestframework
     # "corsheaders",     # pip install django-cors-headers
-
+    # 'rest_framework_simplejwt.token_blacklist',
 
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    # "corsheaders.middleware.CorsMiddleware",
+    # 'corsheaders.middleware.CorsMiddleware',
     "django.middleware.common.CommonMiddleware",
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -87,67 +87,105 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 
 # REST_FRAMEWORK = {
-#     'DEFAULT_AUTHENTICATION_CLASSES': (
-#         'rest_framework.authentication.SessionAuthentication',
+#     "DEFAULT_AUTHENTICATION_CLASSES": (
+#         "rest_framework_simplejwt.authentication.JWTAuthentication",
 #     ),
 #     'DEFAULT_PERMISSION_CLASSES': (
-#         'rest_framework.permissions.IsAuthenticated',
+#         'rest_framework.permissions.AllowAny',
 #     ),
-#     'EXCEPTION_HANDLER': 'config.utils.exceptions.custom_exception_handler',
 #     "DATETIME_FORMAT": "%Y-%m-%dT%H:%M:%S.%f%z",
-#     "USE_TZ": True,
+# }
+
+# SIMPLE_JWT = {
+#     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),   # сколько живёт access
+#     "REFRESH_TOKEN_LIFETIME": timedelta(days=30),      # сколько живёт refresh
+#     "ROTATE_REFRESH_TOKENS": False,
+#     "BLACKLIST_AFTER_ROTATION": True,  # роли не играет, если rotate=False
 # }
 
 # Cross-Origin Resource Sharing (CORS)
 # https://developer.mozilla.org/ru/docs/Web/HTTP/CORS
 
 
-
 #### РАСКОММЕНТИРУЙ ПРИ ИСПОЛЬЗОВАНИИ CORS ####
 
+# ============================================================
+# CORS / CSRF / SESSION (production configuration)
+# ============================================================
 
-# CORS_ALLOWED_ORIGINS = [origin.strip() for origin in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if origin.strip() ]
+# if not DEBUG:
+#     USE_SSL = os.getenv("USE_SSL", "False").lower() == "true"
 #
-# # Разрешить доступ ко всем источникам (НЕ ИСПОЛЬЗОВАТЬ В ПРОДАКШЕНЕ!)
-# # Если True, разрешает запросы со всех доменов
-# CORS_ALLOW_ALL_ORIGINS = os.getenv("CORS_ALLOW_ALL_ORIGINS", "False").lower() == "true"
+#     # ---------------------------
+#     # CORS
+#     # ---------------------------
 #
-# # Разрешить передачу куки и авторизационных заголовков (например, JWT, сессии)
-# CORS_ALLOW_CREDENTIALS = True  # Нужен, если используешь аутентификацию через сессии или токены
+#     CORS_ALLOWED_ORIGINS = [
+#         origin.strip()
+#         for origin in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+#         if origin.strip()
+#     ]
 #
-# # Разрешенные HTTP-методы (какие запросы можно отправлять с фронтенда)
-# CORS_ALLOW_METHODS = [
-#     "GET",
-#     "POST",
-#     "PUT",
-#     "PATCH",
-#     "DELETE",
-#     "OPTIONS"
-# ]
+#     # ⚠️ Только для временных тестов
+#     CORS_ALLOW_ALL_ORIGINS = (
+#         os.getenv("CORS_ALLOW_ALL_ORIGINS", "False").lower() == "true"
+#     )
 #
-# # CSRF настройки
-# CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if os.getenv("CSRF_TRUSTED_ORIGINS") else [
-#     "http://localhost", "http://127.0.0.1"]
-# CSRF_COOKIE_SECURE = os.getenv("CSRF_COOKIE_SECURE", "False") == "True" if DEBUG else True
-# CSRF_COOKIE_SAMESITE = os.getenv("CSRF_COOKIE_SAMESITE", "Lax") if DEBUG else "None"
-# CSRF_COOKIE_HTTPONLY = os.getenv("CSRF_COOKIE_HTTPONLY", "False") == "True"
-# CSRF_COOKIE_DOMAIN = os.getenv("CSRF_COOKIE_DOMAIN", None)  # В dev не задаём, чтобы куки передавались
+#     # разрешить cookies / session auth
+#     CORS_ALLOW_CREDENTIALS = True
 #
-# # Настройки сессии
-# SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "False") == "True" if DEBUG else True
-# SESSION_COOKIE_SAMESITE = os.getenv("SESSION_COOKIE_SAMESITE", "Lax") if DEBUG else "None"
-# SESSION_COOKIE_HTTPONLY = os.getenv("SESSION_COOKIE_HTTPONLY", "False") == "True"
-# SESSION_COOKIE_DOMAIN = os.getenv("SESSION_COOKIE_DOMAIN", None)  # В dev не задаём домен
+#     CORS_ALLOW_METHODS = [
+#         "GET",
+#         "POST",
+#         "PUT",
+#         "PATCH",
+#         "DELETE",
+#         "OPTIONS",
+#     ]
+#
+#     # ---------------------------
+#     # CSRF
+#     # ---------------------------
+#
+#     CSRF_TRUSTED_ORIGINS = [
+#         origin.strip()
+#         for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
+#         if origin.strip()
+#     ]
+#
+#     # HTTPS-aware настройки
+#     CSRF_COOKIE_SECURE = USE_SSL
+#     CSRF_COOKIE_HTTPONLY = False
+#
+#     # SameSite зависит от SSL:
+#     # HTTP → Lax
+#     # HTTPS → None (иначе cross-site cookies не работают)
+#     CSRF_COOKIE_SAMESITE = "None" if USE_SSL else "Lax"
+#
+#     # домен задаётся только если явно указан
+#     CSRF_COOKIE_DOMAIN = os.getenv("CSRF_COOKIE_DOMAIN") or None
+#
+#     # ---------------------------
+#     # SESSION
+#     # ---------------------------
+#
+#     SESSION_COOKIE_SECURE = USE_SSL
+#     SESSION_COOKIE_HTTPONLY = True
+#     SESSION_COOKIE_SAMESITE = "None" if USE_SSL else "Lax"
+#     SESSION_COOKIE_DOMAIN = os.getenv("SESSION_COOKIE_DOMAIN") or None
 
 
 #### РАСКОММЕНТИРУЙ ПРИ ИСПОЛЬЗОВАНИИ SSL\HTTPS ####
 
 
-# # Настройка SSL\HTTPS
-#
+# Настройка SSL\HTTPS
+
 # # Безопасные флаги только в проде
 # if not DEBUG:
 #     SECURE_SSL_REDIRECT = True
+#     SECURE_REDIRECT_EXEMPT = [
+#         r"^api/v1/health/?$",
+#     ]
 #     SECURE_HSTS_SECONDS = 31536000
 #     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 #     SECURE_HSTS_PRELOAD = True
@@ -160,28 +198,28 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
 
 # Если нужен PostgreSQL
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': os.getenv("DB_NAME"),
-#         'USER': os.getenv("DB_USER"),
-#         'PASSWORD': os.getenv("DB_PASSWORD"),
-#         'HOST': os.getenv('DB_HOST', 'db'),
-#         'PORT': os.getenv('DB_PORT', '5432'),
-#         'TEST': {
-#             'NAME': 'test_db',  # Django создаст и удалит эту БД при тестах
-#         },
-#     }
-# }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv("DB_NAME"),
+        'USER': os.getenv("DB_USER"),
+        'PASSWORD': os.getenv("DB_PASSWORD"),
+        'HOST': os.getenv('DB_HOST', 'db'),
+        'PORT': os.getenv('DB_PORT', '5432'),
+        'TEST': {
+            'NAME': 'test_db',  # Django создаст и удалит эту БД при тестах
+        },
+    }
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -224,14 +262,28 @@ STATIC_ROOT = BASE_DIR / "staticfiles"  # Каталог для collectstatic (�
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
+# DATA_UPLOAD_MAX_MEMORY_SIZE = 200 * 1024 * 1024  # 200MB
+# FILE_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024   # 20MB на файл (RAM лимит)
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# На случай если будет кастомный юзер
 # AUTH_USER_MODEL = 'users.CustomUser'
 
+# Срок действия кода подтверждения почты\смены пароля
+# PASSWORD_RESET_TIMEOUT = 60 * 60 * 24 * 3  # 3 дня
+
+### EMAIL
+#
+# EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+# EMAIL_HOST = os.getenv("EMAIL_HOST")
+# EMAIL_PORT = int(os.getenv("EMAIL_PORT", "465"))
+# EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+# EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+# EMAIL_USE_SSL = True
+# FRONTEND_URL = os.getenv("FRONTEND_URL")
 
 # ==============================
 # Папка для логов
@@ -278,7 +330,7 @@ LOGGING = {
         #  Логи в файл (ротация раз в день)
         'file': {
             'class': 'logging.handlers.TimedRotatingFileHandler',
-            'level': 'DEBUG',
+            'level': 'DEBUG' if DEBUG else 'INFO',
             'formatter': 'default',
 
             #  основной файл логов
@@ -299,7 +351,8 @@ LOGGING = {
         # Корневой логгер (используется по умолчанию)
         '': {
             'handlers': ['console', 'file'],
-            'level': 'DEBUG',
+            # 'level': 'DEBUG' if DEBUG else 'INFO',
+            'level': "INFO",
             'propagate': True,
         },
 
@@ -310,10 +363,17 @@ LOGGING = {
             'propagate': False,
         },
 
+        'users': {
+            'handlers': ['console', 'file'],
+            # 'level': 'DEBUG' if DEBUG else 'INFO',
+            'level': "INFO",
+            'propagate': False,
+        },
+
         # Пример логгера для приложения
         # 'app_name': {
         #     'handlers': ['console', 'file'],
-        #     'level': 'DEBUG',
+        #     'level': 'DEBUG' if DEBUG else 'INFO',
         #     'propagate': False,
         # },
     },
