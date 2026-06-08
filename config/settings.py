@@ -295,7 +295,7 @@ os.makedirs(LOG_DIR, exist_ok=True)
 
 
 # ==============================
-# Django LOGGING
+# Django LOGGER v2
 # ==============================
 LOGGING = {
     'version': 1,
@@ -307,39 +307,95 @@ LOGGING = {
     # Форматтеры
     # ==============================
     'formatters': {
-        # Основной читаемый формат (для файлов и консоли)
+
+        # Основной formatter
+        # Поддерживает:
+        # - обычные логи
+        # - extra={}
+        # - contextvars (в будущем)
         'default': {
-            'format': (
-                '%(asctime)s | %(levelname)s | %(name)s | '
-                '%(message)s | %(filename)s:%(lineno)d'
+
+            # Наш кастомный formatter
+            '()': (
+                'config.logger.formatters.'
+                'TextFormatter'
             ),
+
+            # Базовый шаблон логов
+            'fmt': (
+                '%(asctime)s | '
+                '%(levelname)s | '
+                '%(name)s | '
+                '%(message)s | '
+                '%(filename)s:%(lineno)d'
+            ),
+
+            # Формат даты
+            'datefmt': '%Y-%m-%d %H:%M:%S',
         },
     },
 
     # ==============================
-    #  Хэндлеры (куда пишем логи)
+    # Хэндлеры (куда пишем логи)
     # ==============================
     'handlers': {
-        #  Логи в консоль (удобно для dev / docker logs)
+
+        # ==============================
+        # Консоль
+        # ==============================
+        #
+        # Удобно:
+        # - для разработки
+        # - docker logs
+        # - systemd journal
+        #
         'console': {
+
             'class': 'logging.StreamHandler',
-            'level': 'DEBUG' if DEBUG else 'INFO',
+
+            'level': (
+                'DEBUG'
+                if DEBUG else 'INFO'
+            ),
+
             'formatter': 'default',
         },
 
-        #  Логи в файл (ротация раз в день)
+        # ==============================
+        # Файл логов
+        # ==============================
+        #
+        # Ротация:
+        # - новый файл каждый день
+        # - хранить 14 дней
+        #
         'file': {
-            'class': 'logging.handlers.TimedRotatingFileHandler',
-            'level': 'DEBUG' if DEBUG else 'INFO',
+
+            'class': (
+                'logging.handlers.'
+                'TimedRotatingFileHandler'
+            ),
+
+            'level': (
+                'DEBUG'
+                if DEBUG else 'INFO'
+            ),
+
             'formatter': 'default',
 
-            #  основной файл логов
-            'filename': os.path.join(LOG_DIR, 'app.log'),
+            # Основной файл логов
+            'filename': os.path.join(
+                LOG_DIR,
+                'app.log',
+            ),
 
-            #  ротация логов
-            'when': 'midnight',      # новый файл каждый день
-            'interval': 1,           # интервал = 1 день
-            'backupCount': 14,       # храним 14 дней логов
+            # Ротация
+            'when': 'midnight',
+
+            'interval': 1,
+
+            'backupCount': 14,
+
             'encoding': 'utf-8',
         },
     },
@@ -348,33 +404,62 @@ LOGGING = {
     # Логгеры
     # ==============================
     'loggers': {
-        # Корневой логгер (используется по умолчанию)
+
+        # ==============================
+        # Root logger
+        # ==============================
+        #
+        # Используется всеми логгерами
+        # если для них не указана
+        # отдельная конфигурация.
+        #
         '': {
-            'handlers': ['console', 'file'],
-            # 'level': 'DEBUG' if DEBUG else 'INFO',
-            'level': "INFO",
+
+            'handlers': [
+                'console',
+                'file',
+            ],
+
+            'level': 'INFO',
+
             'propagate': True,
         },
 
-        # Ошибки HTTP запросов Django
+        # ==============================
+        # Ошибки Django HTTP
+        # ==============================
         'django.request': {
-            'handlers': ['console', 'file'],
+
+            'handlers': [
+                'console',
+                'file',
+            ],
+
             'level': 'ERROR',
+
             'propagate': False,
         },
 
-        'users': {
-            'handlers': ['console', 'file'],
-            # 'level': 'DEBUG' if DEBUG else 'INFO',
-            'level': "INFO",
+        # ==============================
+        # Основной логгер проекта
+        # ==============================
+        #
+        # Все:
+        # main_app.*
+        #
+        'main_app': {
+
+            'handlers': [
+                'console',
+                'file',
+            ],
+
+            'level': (
+                'DEBUG'
+                if DEBUG else 'INFO'
+            ),
+
             'propagate': False,
         },
-
-        # Пример логгера для приложения
-        # 'app_name': {
-        #     'handlers': ['console', 'file'],
-        #     'level': 'DEBUG' if DEBUG else 'INFO',
-        #     'propagate': False,
-        # },
     },
 }
