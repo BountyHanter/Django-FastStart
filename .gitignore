@@ -43,7 +43,6 @@ black.log
 .tox/
 pytest_cache/
 htmlcov/
-*/tests
 
 # Jupyter Notebooks
 .ipynb_checkpoints/
