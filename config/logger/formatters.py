@@ -87,17 +87,18 @@ class JsonFormatter(logging.Formatter):
             "func": record.funcName,
             "line": record.lineno,
         }
+        reserved = set(data) | {"exc"}
 
         # 1) сначала контекст
         ctx = get_context()
         for k, v in ctx.items():
             # не перезаписываем базовые поля
-            if k not in data:
+            if k not in reserved:
                 data[k] = _safe_json_value(v)
 
         # 2) затем extra из record (имеет приоритет над контекстом)
         for k, v in record.__dict__.items():
-            if k in standard or k in {"message"}:
+            if k in standard or k in reserved or k in {"message", "asctime"}:
                 continue
             data[k] = _safe_json_value(v)
 
