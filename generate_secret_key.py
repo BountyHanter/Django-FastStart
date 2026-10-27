@@ -11,7 +11,8 @@ if not env_path.exists():
 
 content = env_path.read_text(encoding="utf-8").splitlines()
 
-new_secret = f"SECRET_KEY=django-insecure-{get_random_secret_key()}"
+# Одинарные кавычки сохраняют символы $ при чтении .env Docker Compose.
+new_secret = f"SECRET_KEY='django-insecure-{get_random_secret_key()}'"
 
 updated = False
 new_lines = []
@@ -24,7 +25,7 @@ for line in content:
         new_lines.append(line)
 
 if not updated:
-    raise ValueError("Строка SECRET_KEY= не найдена в .env")
+    new_lines = [new_secret, "", *new_lines]
 
 env_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
 
